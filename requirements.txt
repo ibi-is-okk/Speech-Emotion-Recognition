@@ -1,0 +1,8 @@
+numpy
+pandas
+matplotlib
+seaborn
+scikit-learn>=1.2
+librosa>=0.10
+soundfile
+joblib

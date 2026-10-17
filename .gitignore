@@ -1,0 +1,6 @@
+.venv/
+data/
+__pycache__/
+*.joblib
+outputs/features*.csv
+outputs/eda/listen.html
