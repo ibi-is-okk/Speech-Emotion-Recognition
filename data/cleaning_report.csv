@@ -1,0 +1,12 @@
+Check,Found,Action
+Missing values (labels/metadata),0,None needed
+Total clips (expected 1440),1440,None needed
+Clips per actor (expected 60),[60],None needed
+Unreadable/corrupt files,0,None needed
+Sample rate inconsistent,0,All files 48 kHz; resampled to 22.05 kHz
+Stereo files (others mono),5,Converted to mono on load
+Duplicate filenames,0,None needed
+Duplicate audio (MD5),1,Removed 1 copy; 1439 clips remain
+Silent clips,0,None needed
+Clipped clips,0,None needed
+IQR outliers (any rule),258,Kept: natural emotional variation
