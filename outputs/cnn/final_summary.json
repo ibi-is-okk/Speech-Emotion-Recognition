@@ -1,0 +1,42 @@
+{
+  "chosen_run": "no_specaug",
+  "config": {
+    "channels": [
+      32,
+      64,
+      128,
+      128
+    ],
+    "dropout": 0.3,
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "specaug": false,
+    "label_smoothing": 0.0
+  },
+  "chosen_seed": 1,
+  "seeds": [
+    {
+      "seed": 0,
+      "val_macro_f1": 0.5423043000340685,
+      "val_acc": 0.5583333333333333,
+      "best_epoch": 55
+    },
+    {
+      "seed": 1,
+      "val_macro_f1": 0.5701921512047088,
+      "val_acc": 0.5791666666666667,
+      "best_epoch": 57
+    },
+    {
+      "seed": 2,
+      "val_macro_f1": 0.5640970438848092,
+      "val_acc": 0.5666666666666667,
+      "best_epoch": 44
+    }
+  ],
+  "max_epochs": 60,
+  "patience": 12,
+  "batch": 32,
+  "quick_dry_run": false,
+  "selection_data": "validation actors 3, 6, 15, 20 only"
+}

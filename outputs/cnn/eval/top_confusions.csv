@@ -1,0 +1,9 @@
+true,predicted,clips,share_of_true_class
+sad,calm,10,0.25
+sad,fearful,8,0.2
+fearful,happy,8,0.2
+neutral,calm,6,0.3
+calm,neutral,6,0.15
+happy,angry,6,0.15
+sad,neutral,6,0.15
+fearful,calm,5,0.125
