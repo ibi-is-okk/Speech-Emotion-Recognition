@@ -1,8 +1,22 @@
+# --- core ---
 numpy
 pandas
+scipy
 matplotlib
 seaborn
-scikit-learn>=1.2
+scikit-learn>=1.2     # IMPORTANT: use the same version that trained models/svm_tuned.joblib and rf_tuned.joblib
 librosa>=0.10
 soundfile
 joblib
+
+# --- notebooks ---
+jupyter
+ipykernel
+
+# --- CNN (Colab already has torch; needed locally for the website) ---
+torch>=2.0
+torchaudio
+
+# --- website ---
+streamlit>=1.36
+plotly>=5.18
