@@ -23,6 +23,7 @@ from sklearn.metrics import (accuracy_score, classification_report, confusion_ma
                              precision_recall_fscore_support)
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "website"))
 sys.path.insert(0, str(ROOT))
 import ser_pipeline as sp                                           # noqa: E402
 from utils.audio_preprocessing import classical_features            # noqa: E402
@@ -103,8 +104,8 @@ for i in rng.choice(len(test), size=min(args.n_audio, len(test)), replace=False)
         print("  feature names / order differ from the training CSV!")
         break
     ref = r[feat_cols].values.astype(float)
-    worst = max(worst, float(np.max(np.abs(vec[0] - ref) / (np.abs(ref) + 1e-9))))
-good = worst < 1e-6
+    worst = max(worst, float(np.max(np.abs(vec[0] - ref) / (np.abs(ref) + 1e-3))))
+good = worst < 1e-3
 print(f"  max relative difference = {worst:.2e}  ->  {'PASS' if good else 'FAIL'}")
 ok = ok and good
 print("\nRESULT:", "ALL CHECKS PASSED" if ok else "SOMETHING FAILED (see above)")

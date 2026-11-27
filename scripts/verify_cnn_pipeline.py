@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "website"))
 sys.path.insert(0, str(ROOT))
 
 import ser_audio                                                       # noqa: E402

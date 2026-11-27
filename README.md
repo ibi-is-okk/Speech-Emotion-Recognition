@@ -1,168 +1,139 @@
-# Speech Emotion Recognition on RAVDESS (SVM vs Random Forest)
+# RAVDESS Speech Emotion Recognition
 
-One script, `ser_pipeline.py`, covers all four phases. Each phase is a command you can run on its own.
+A speaker-independent speech emotion recognition project comparing hand-crafted audio features with classical machine learning (SVM and Random Forest) against a log-Mel CNN. The Streamlit site presents the project, compares saved test results, and predicts emotions from uploaded WAV recordings.
 
-## 1. Setup (about 5 minutes)
+## Problem and dataset
 
-Requirements: Python 3.9 or newer, about 1 GB of free disk space, and an internet connection for the first run.
+The task is to classify acted speech into eight emotion labels from voice acoustics, not sentence meaning. The project uses the audio-only speech subset of RAVDESS, available from [Zenodo record 1188976](https://zenodo.org/records/1188976), under the CC BY-NC-SA 4.0 licence.
 
-```bash
-mkdir ravdess_ser && cd ravdess_ser      # put ser_pipeline.py and requirements.txt here
-python -m venv .venv
-# Windows:  .venv\Scripts\activate        macOS/Linux:  source .venv/bin/activate
-pip install -r requirements.txt
+The source set contains 1,440 speech clips from 24 actors. Phase 1 found one duplicate audio recording and removed that copy, leaving 1,439 labeled clips in `data/labels.csv`. The cleaned label file contains 8 emotions and the actor-independent split. Neutral is the smallest class (96 clips); the other classes have 191 or 192 clips after cleaning. These counts come from `data/cleaning_report.csv` and `data/labels.csv`.
+
+The classical extended feature table has 376 numeric features per clip, as counted from `outputs/features_v2.csv`: MFCCs, delta and delta-delta MFCCs, log-Mel bands, chroma, spectral contrast, spectral statistics, pitch statistics, voiced ratio, and duration. The CNN consumes a 128 × 173 log-Mel spectrogram using the shared preprocessing in `ser_audio.py`.
+
+## Cleaning, EDA, and split
+
+The cleaning report records no missing labels, unreadable files, inconsistent sample rates, silent clips, or clipped clips. It found five stereo files, which the loaders convert to mono, and 258 IQR outlier flags, which were retained as natural emotional variation. The source audio is 48 kHz and is resampled during preprocessing. These findings are recorded in `data/cleaning_report.csv`.
+
+The analysis set is split by actor to avoid speaker leakage. Validation actors are 3, 6, 15, and 20; test actors are 1, 9, 12, 17, and 19. The test set contains 300 clips from those held-out actors. Split assignments are in `data/labels.csv` and `data/split.csv`.
+
+## Modeling pipelines
+
+### Classical ML
+
+`ser_pipeline.py` performs metadata parsing, EDA, preprocessing, feature extraction, speaker-grouped training/validation, and evaluation. SVM and Random Forest use a `StandardScaler` inside each sklearn pipeline. The website uses the non-speaker-normalized SVM and Random Forest checkpoints from the `results_v2` run, staged under `models/`. `scripts/verify_classical.py` checks their reported metrics and exports website result files to `outputs/classical/`.
+
+### CNN
+
+`ser_audio.py` provides the shared log-Mel preprocessing, and `ser_cnn.py` defines the CNN and checkpoint helpers. Notebooks `04_logmel_preprocessing.ipynb` through `07_cnn_evaluation_colab.ipynb` cover CNN inputs, training, and evaluation. The selected checkpoint and evaluation files are stored under `models/` and `outputs/cnn/`. The CNN run metadata in `outputs/cnn/final_summary.json` records `quick_dry_run: false`.
+
+## Final test results
+
+The table below is read from `outputs/cnn/eval/model_comparison_row.csv` and `outputs/classical/model_comparison.csv` (classical rows exported by `scripts/verify_classical.py`). Values are rounded to three decimal places for display.
+
+| Model | Accuracy | Precision (macro) | Recall (macro) | Macro-F1 |
+|---|---:|---:|---:|---:|
+| CNN | 0.557 | 0.555 | 0.566 | 0.544 |
+| SVM (non-speaker-normalized) | 0.553 | 0.594 | 0.556 | 0.554 |
+| Random Forest (non-speaker-normalized) | 0.477 | 0.498 | 0.491 | 0.473 |
+
+These are test results, not guarantees for arbitrary recordings. The per-emotion reports and confusion matrices are saved under `outputs/cnn/eval/` and `outputs/classical/`.
+
+## Key insights and limitations
+
+- The neutral class is smaller than the other emotion classes, so macro-averaged metrics are important.
+- Confusion matrices show overlap among calm, neutral, and sad; the actual counts are in the saved confusion-matrix CSVs.
+- Speaker-normalized experiments in `outputs/results_v2_spknorm/` score higher than the non-normalized run in some metrics, but they require several clips from the same speaker and are not suitable for predicting one uploaded clip. The website deliberately uses the non-normalized models.
+- The test set has 300 clips from only 5 actors. Differences around ±3 percentage points should be interpreted cautiously.
+- RAVDESS contains acted studio speech and repeated sentences. Results may not transfer to natural speech, other languages, microphones, or noisy recordings.
+- The CNN is trained on a small dataset; class-level performance and actor-specific variation should be considered when interpreting its predictions.
+
+## Repository structure
+
+```text
+.
+├── website/
+│   ├── app.py
+│   ├── pages/                     Streamlit overview, comparison, and prediction pages
+│   └── utils/                     Result loading, audio preprocessing, model prediction, UI
+├── ser_audio.py                   Shared audio preprocessing for CNN input
+├── ser_cnn.py                     CNN definition and checkpoint utilities
+├── ser_pipeline.py                Classical ML pipeline
+├── scripts/                       Verification and real-clip prediction checks
+├── notebooks/                     Cleaning, EDA, modeling, and final comparison notebooks
+├── data/                          Labels and split metadata; WAV/array data are generated or downloaded
+├── models/                        CNN checkpoint and deployable classical model files
+├── outputs/                       Evaluation artifacts, reports, and generated figures
+├── requirements.txt               Runtime dependencies
+└── requirements-dev.txt           Runtime plus notebook dependencies
 ```
 
-Google Colab works too. Upload the two files, then run `!pip install -r requirements.txt` and use `!python ser_pipeline.py ...` for each command below.
+## Setup and run
 
-## 2. Run it
+Use Python 3.11 for the live site. In Streamlit Community Cloud, select Python 3.11 in the app's Advanced settings. Hugging Face Spaces is a fallback if the Community Cloud memory limit is exceeded.
 
-Fast path, which runs everything:
-
-```bash
-python ser_pipeline.py all
-```
-
-Or one phase at a time, which is better for learning and debugging:
-
-| Step | Command | What it does | Time |
-|---|---|---|---|
-| Phase 1 | `python ser_pipeline.py download` | Downloads `Audio_Speech_Actors_01-24.zip` (about 200 MB) from Zenodo into `data/RAVDESS/` and unzips it. | 1-5 min |
-| Phase 1 | `python ser_pipeline.py eda` | Parses filenames, saves class-balance plots, duration plots, waveforms, mel-spectrograms and a `listen.html` page. | about 1 min |
-| Phase 2 | `python ser_pipeline.py features` | Loads each clip at 22.05 kHz, trims silence, normalizes it and extracts 114 features into `outputs/features.csv`. | 2-6 min |
-| Phase 3+4 | `python ser_pipeline.py train` | Runs the speaker-independent split, baselines, GridSearchCV, metrics, confusion matrices, feature importances and `summary.md`. | 5-20 min |
-
-Useful options:
-
-* `train --quick` runs tiny grids, so you can check the pipeline in under a minute.
-* `train --split random` uses a random split with no speaker separation. Compare it with the default to see how much speaker leakage inflates accuracy.
-* `--n-jobs 4` limits CPU use.
-* `features --pad` zero-pads short clips to 4 s. The default does not pad.
-* `--vocal-channel both` adds the singing set. Run `download --include-song` for it first.
-
-### If the download fails (firewall or no internet)
-
-1. Download manually from https://zenodo.org/records/1188976 (`Audio_Speech_Actors_01-24.zip`). Kaggle's "RAVDESS Emotional speech audio" also works.
-2. Unzip it so you have `data/RAVDESS/Actor_01/ ... Actor_24/`. The exact nesting doesn't matter, because the code searches recursively for `.wav` files.
-3. Skip `download` and run `eda`, `features` and `train`. Use `--data-dir path/to/folder` if your data is elsewhere.
-
-## 3. Listening to samples
-
-Open `outputs/eda/listen.html` in your browser. It has three random clips per emotion with play buttons. In a Jupyter notebook you can use `IPython.display.Audio("path/to/file.wav")` instead.
-
-## 4. What each phase does
-
-**Filename parsing.** `03-01-05-01-02-01-01.wav` has seven fields:
-
-| Field | Meaning | Value in the example |
-|---|---|---|
-| Modality | 03 = audio-only | audio-only |
-| Vocal channel | 01 = speech, 02 = song | speech |
-| Emotion | 01 neutral, 02 calm, 03 happy, 04 sad, 05 angry, 06 fearful, 07 disgust, 08 surprised | angry |
-| Intensity | 01 normal, 02 strong | normal |
-| Statement | 01 or 02 | "Dogs are sitting by the door" |
-| Repetition | 01 or 02 | 1 |
-| Actor | Odd = male, even = female | Actor 1, male |
-
-**Class balance.** The speech set has 1,440 clips. Neutral has only 96, because it has no "strong" intensity. Every other emotion has 192. The training code uses `class_weight="balanced"` to compensate.
-
-**Preprocessing.**
-* Resample to 22,050 Hz and trim silence at 25 dB.
-* Peak-normalize each clip and cap it at 4 s.
-* Features are means and standard deviations over time, so they don't depend on clip length.
-
-**Features (114 in total).**
-
-| Feature | Count |
-|---|---|
-| 40 MFCCs, mean and std | 80 |
-| 12 chroma bins, mean and std | 24 |
-| Spectral centroid, bandwidth, rolloff, ZCR and RMS (energy), mean and std each | 10 |
-
-**Scaling.** `StandardScaler` sits inside the sklearn `Pipeline`, so it is fit on training data only. That means no test information leaks into the scaler, and during cross-validation it is re-fit on each fold. Scaling the whole dataset first would be a common mistake that inflates scores.
-
-**Speaker-independent split.** `GroupShuffleSplit` groups by actor, so about 5 of the 24 actors are held out entirely for testing. GridSearchCV also uses `GroupKFold`, so tuning never sees the same actor in both the training and validation parts of a fold.
-
-**Models and grids.**
-
-| Model | Hyperparameters searched |
-|---|---|
-| SVM | Kernel, C, gamma. RBF: C in {0.1, 1, 10, 100}, gamma in {scale, 0.001, 0.003, 0.01}. Linear: C in {0.001 ... 10}. |
-| Random Forest | n_estimators in {200, 500}, max_depth in {None, 20, 40}, min_samples_split in {2, 5, 10}, max_features in {sqrt, 0.3}. |
-
-The search optimizes macro-F1, so it doesn't favour the majority classes. Baselines with default settings are reported next to the tuned models.
-
-## 5. Output files
-
-All of these are in `outputs/`:
-
-| File | Contents |
-|---|---|
-| `eda/metadata.csv` | One row per clip, with the parsed fields. |
-| `eda/class_balance.png`, `durations.png` | Class distributions and clip lengths. |
-| `eda/waveform_per_emotion.png`, `melspec_per_emotion.png` | One example per emotion. |
-| `eda/listen.html` | Audio players for sample clips. |
-| `features.csv` | Unscaled feature table plus labels and actor IDs. |
-| `results/summary.md` | Auto-written results summary: comparison table, best parameters, top confusions and feature importance. |
-| `results/model_comparison.csv`, `.png` | Accuracy, macro precision, recall and F1 for all four models. |
-| `results/classification_report_*.csv` | Per-emotion precision, recall and F1. |
-| `results/confusion_matrix_*.png` | Counts and row-normalized matrices. |
-| `results/gridsearch_*.csv` | Every hyperparameter combination with its CV score. |
-| `results/rf_feature_importance*.csv`, `.png` | Per-feature and per-family importance. |
-| `results/*_tuned.joblib` | Saved models. They include the scaler. |
-
-Predicting a new clip:
-
-```python
-import joblib, pandas as pd
-import ser_pipeline as sp
-model = joblib.load("outputs/results/SVM_tuned.joblib")
-y, sr = sp.load_and_preprocess("my_clip.wav")
-x = pd.DataFrame([sp.extract_features(y, sr)])
-print(model.predict(x.values))
-```
-
-## 6. What results to expect
-
-These are typical figures, not guarantees. I could not run the full pipeline on the real dataset where I built this, so check your own numbers.
-
-* Speaker-independent accuracy with classical features on 8 classes is usually around 45-65%.
-* A random split often reads 10-20 points higher, because the model has heard the same actors during training.
-* Commonly confused pairs are neutral and calm, fearful and sad, angry and disgust, and happy and surprised.
-* In RF importance, MFCC features usually dominate.
-
-For your write-up, use `summary.md` and the per-class reports to explain which emotions are hard and why, and compare SVM against RF. To get higher accuracy, the usual next steps are delta MFCCs, mel-spectrogram CNNs or pretrained models such as wav2vec2.
-
-## 7. Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| `ModuleNotFoundError: librosa` | Activate your venv and run `pip install -r requirements.txt`. |
-| `No RAVDESS-style .wav files found` | Check `--data-dir`. File names must keep the original `03-01-..` format. |
-| `librosa.load` error or `audioread` warnings | Run `pip install soundfile` and make sure the files are not corrupted or only partly downloaded. |
-| Very slow features or training | Use `--n-jobs 4`, and `--quick` for training. |
-| Memory errors in the RF grid | Remove 500 from `n_estimators`. |
-| `GridSearchCV` or `GroupKFold` errors | Use `--cv-folds 3`. You need at least as many training actors as folds. |
-
-## 8. Improving the scores (v2 options)
-
-These options are flags on the same script. Your first results stay untouched because each run uses its own file and folder name.
-
-| Option | What it does |
-|---|---|
-| Extended features (default for `features`) | Adds delta and delta-delta MFCCs, 40 log-mel bands, spectral contrast, pitch (F0) statistics, voiced ratio and clip duration. This gives 376 features. Use `--basic` to get the original 114. |
-| `features --augment` | Adds noise, pitch-shifted and time-stretched copies of every clip. Only training actors' copies are used for training. The test set always contains original clips only. |
-| `train --speaker-norm` | Z-scores each feature within each actor, which removes voice identity. It uses no labels, but needs several clips from the same speaker. It is not usable for a single unseen clip. |
-| `train --no-aug` | Ignores augmented rows. Use it for an ablation: how much did augmentation help? |
-
-Commands (run from your project folder with the venv active):
+Create and activate a virtual environment, then install runtime dependencies:
 
 ```powershell
-python ser_pipeline.py eda                                                          # fixes listen.html
-python ser_pipeline.py features --augment --features-name features_v2.csv
-python ser_pipeline.py train --features-name features_v2.csv --run-name results_v2
-python ser_pipeline.py train --features-name features_v2.csv --run-name results_v2_spknorm --speaker-norm
-python ser_pipeline.py train --features-name features_v2.csv --run-name results_v2_spknorm_noaug --speaker-norm --no-aug
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-Compare `outputs/results`, `results_v2`, `results_v2_spknorm` and `results_v2_spknorm_noaug` for your write-up.
+For notebook work, install the development dependencies as well:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+```
+
+Download the RAVDESS audio if `data/RAVDESS/` is not present:
+
+```powershell
+python ser_pipeline.py download
+```
+
+The classical feature CSV is ignored by Git because it is generated locally. Create it before running notebook `08` or classical verification if it is missing:
+
+```powershell
+python ser_pipeline.py features --augment --features-name features_v2.csv
+```
+
+Run the notebooks in order. Notebooks `06_cnn_training_colab.ipynb` and `07_cnn_evaluation_colab.ipynb` require a Colab GPU: run them in Colab with `QUICK = False`, then download the executed notebooks and `cnn_outputs/`; place the notebooks under `notebooks/` and the outputs under `outputs/cnn/`. Do not substitute fabricated notebook outputs.
+
+Execute the local-capable notebooks from the project root:
+
+```powershell
+Get-ChildItem notebooks -File | Where-Object { $_.Name -match '^(0[1-5]|0[89])_' } | Sort-Object Name | ForEach-Object {
+    jupyter nbconvert --to notebook --execute --inplace $_.FullName
+}
+```
+
+Start the Streamlit app from the repository root:
+
+```powershell
+python -m streamlit run website/app.py
+```
+
+Open the local URL printed by Streamlit. The site reads saved models and results; it does not train models at startup.
+
+Run the verification scripts after their required data and checkpoints are present:
+
+```powershell
+python scripts/verify_classical.py --features outputs/features_v2.csv
+python scripts/verify_cnn_pipeline.py
+python scripts/check_model_predictions.py
+```
+
+The CNN verification needs the arrays created by notebook `04_logmel_preprocessing.ipynb`, the CNN checkpoint, and its evaluation predictions. Check the `quick_dry_run` field in `outputs/cnn/final_summary.json` before reporting the CNN results. In this workspace, the classical score-reproduction checks pass, but its strict feature-reproduction check against the saved CSV does not; see `HANDOFF.md`. Do not loosen the check tolerance to hide this discrepancy.
+
+## Deployment
+
+The website is launched with `python -m streamlit run website/app.py`. Ensure the repository includes `models/cnn_best.pt`, `models/svm_tuned.joblib`, `models/rf_tuned.joblib`, `data/labels.csv`, and the evaluation files read from `outputs/cnn/` and `outputs/classical/`. Raw WAV files and large training arrays are excluded by `.gitignore`; a WAV can be uploaded directly to the running site.
+
+Live site URL: **[fill in after deployment]**
+
+## Team
+
+- **Member 1 — Classical ML:** feature engineering and SVM / Random Forest pipeline.
+- **Member 2 — CNN:** log-Mel preprocessing, CNN training, and evaluation.
+- **Website:** Streamlit pages, model loading, preprocessing integration, and prediction interface.

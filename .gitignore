@@ -2,14 +2,8 @@
 __pycache__/
 .ipynb_checkpoints/
 .DS_Store
-*.joblib
- 
-# raw audio and big arrays: too large for GitHub (see README for download link)
+
 data/RAVDESS/
-data/*.zip
-data/*.npy
- 
-# classical-ML intermediate files
+data/X_logmel*.npy
 outputs/features*.csv
-outputs/eda/listen.html
- 
+outputs/results*/*.joblib

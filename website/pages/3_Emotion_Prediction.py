@@ -1,6 +1,10 @@
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # project root, so `utils` and `ser_audio` import from any page
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+WEBSITE_ROOT = Path(__file__).resolve().parents[1]
+for import_path in (PROJECT_ROOT, WEBSITE_ROOT):
+    if str(import_path) not in sys.path:
+        sys.path.insert(0, str(import_path))
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
@@ -24,12 +28,12 @@ def _mtime(p):
 
 
 @st.cache_resource(show_spinner="Loading CNN...")
-def get_cnn(_mtime_key):
+def get_cnn(mtime_key):
     return try_load_cnn()
 
 
 @st.cache_resource(show_spinner="Loading classical model...")
-def get_classical(path_str, _mtime_key, name):
+def get_classical(path_str, mtime_key, name):
     return try_load_classical(path_str, name)
 
 

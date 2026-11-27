@@ -1,7 +1,12 @@
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[0]))   # project root, so `utils` and `ser_audio` import from any page
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+WEBSITE_ROOT = Path(__file__).resolve().parent
+for import_path in (PROJECT_ROOT, WEBSITE_ROOT):
+    if str(import_path) not in sys.path:
+        sys.path.insert(0, str(import_path))
 
 import streamlit as st
 import pandas as pd

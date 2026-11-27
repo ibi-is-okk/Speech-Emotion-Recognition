@@ -9,7 +9,7 @@ from pathlib import Path
 import json
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 EMOTIONS = ["neutral", "calm", "happy", "sad", "angry", "fearful", "disgust", "surprised"]
 
 # Where results are looked for (first match wins).
