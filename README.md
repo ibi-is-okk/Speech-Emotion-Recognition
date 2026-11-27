@@ -142,7 +142,7 @@ The CNN verification needs the arrays created by notebook `04_logmel_preprocessi
 
 The website is launched with `python -m streamlit run website/app.py`. Ensure the repository includes `models/cnn_best.pt`, `models/svm_tuned.joblib`, `models/rf_tuned.joblib`, `data/labels.csv`, and the evaluation files read from `outputs/cnn/` and `outputs/classical/`. Raw WAV files and large training arrays are excluded by `.gitignore`; a WAV can be uploaded directly to the running site.
 
-Live site URL: **[fill in after deployment]**
+Live site URL: **https://speech-emotion-recognition-njlfkxtpmxc4szgzgcgruu.streamlit.app/**
 
 ## Team
 
