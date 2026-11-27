@@ -116,6 +116,18 @@ python -m streamlit run website/app.py
 
 Open the local URL printed by Streamlit. The site reads saved models and results; it does not train models at startup.
 
+### Record a WAV sample for testing
+
+The local recorder uses your computer's microphone. Install dependencies from `requirements.txt` (which includes `sounddevice` and `soundfile`), allow microphone access in Windows privacy settings, then run this command from the project root:
+
+```powershell
+python scripts/record_wav.py
+```
+
+Speak when prompted. The script records four seconds of mono audio at 22,050 Hz and saves `my_clip.wav` in the project root. In the Streamlit app, open **Emotion Prediction**, select **Browse files**, choose `my_clip.wav`, and review the CNN, SVM, and Random Forest scores. The recorder file is ignored by Git so a personal voice recording is not pushed accidentally.
+
+If you prefer, install the recorder dependency alone with `python -m pip install sounddevice`; `soundfile` is already listed in `requirements.txt`. If recording fails, check that Windows microphone access is enabled and a recording device is available.
+
 Run the verification scripts after their required data and checkpoints are present:
 
 ```powershell

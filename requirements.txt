@@ -8,6 +8,7 @@ seaborn
 scikit-learn==1.9.1
 librosa>=0.10
 soundfile
+sounddevice
 joblib
 
 torch>=2.0

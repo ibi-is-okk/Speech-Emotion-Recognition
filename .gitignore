@@ -6,4 +6,5 @@ __pycache__/
 data/RAVDESS/
 data/X_logmel*.npy
 outputs/features*.csv
+/my_clip.wav
 outputs/results*/*.joblib
